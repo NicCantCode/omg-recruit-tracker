@@ -1,35 +1,37 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabaseClient";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+type Recruit = {
+  id: string;
+  rs_name: string;
+  joined_at: string;
+  status: string;
+
+  discord_name?: string;
+};
+
+export default function App() {
+  const [rows, setRows] = useState<Recruit[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("recruits")
+        .select("id, rs_name, joined_at, status, discord_name")
+        .order("joined_at", { ascending: false });
+
+      if (error) setError(error.message);
+      else setRows(data ?? []);
+    })();
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div style={{ padding: 16 }}>
+      <h1>Recruit Tracker</h1>
+      {error && <p>Error: {error}</p>}
+      <pre>{JSON.stringify(rows, null, 2)}</pre>
+    </div>
+  );
 }
-
-export default App
