@@ -26,6 +26,8 @@
   height: 34px;
   border-radius: 12px;
   object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .titleBlock {
@@ -35,7 +37,7 @@
 }
 
 .title {
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: 0.2px;
 }
 
@@ -66,7 +68,7 @@
 }
 
 .navLink:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
 }
@@ -89,8 +91,8 @@
   height: 34px;
   border-radius: 999px;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .userName {
@@ -98,7 +100,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   font-weight: 650;
 }
 
@@ -106,7 +108,7 @@
   padding: 0.55em 0.9em;
 }
 
-/* Mobile: reduce nav, keep essentials visible */
+/* Mobile: reduce clutter, keep essentials */
 @media (max-width: 720px) {
   .left {
     min-width: 0;
@@ -125,7 +127,7 @@
   }
 }
 
-/* Tiny screens: hide username too, keep avatar + logout */
+/* Tiny screens: hide username, keep avatar + logout */
 @media (max-width: 420px) {
   .userName {
     display: none;

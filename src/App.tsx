@@ -1,84 +1,23 @@
-import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "./lib/supabaseClient";
-import Header from "./components/Header";
-import styles from "./App.module.css";
+import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./pages/Login";
+import DashboardLayout from "./layouts/DashboardLayout";
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-
-  const user = session?.user ?? null;
-
-  useEffect(() => {
-    const loadSession = async (): Promise<void> => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("getSession error:", error.message);
-        return;
-      }
-
-      setSession(data.session);
-    };
-
-    void loadSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const signInWithDiscord = async (): Promise<void> => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "discord",
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
-
-    if (error) {
-      console.error("Sign out error:", error.message);
-      alert(error.message);
-    }
-  };
-
-  const signOut = async (): Promise<void> => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Sign out error:", error.message);
-      alert(error.message);
-    }
-  };
-
-  if (!user) {
-    return (
-      <div className={styles.loggedOutPage}>
-        <div className={styles.loggedOutCard}>
-          <div className={styles.loggedOutTitle}>Recruit Tracker</div>
-          <div className={styles.loggedOutText}>Please sign in with Discord.</div>
-
-          <button type="button" className={styles.primaryButton} onClick={() => void signInWithDiscord()}>
-            Sign in with Discord
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.appShell}>
-      <Header user={user} onSignOut={signOut} />
-      <main className={styles.main}>
-        <div className={styles.blankState}>
-          <div className={styles.blankTitle}>Dashboard</div>
-          <div className={styles.blankText}>Recruits UI Manaement Coming Soon.</div>
-        </div>
-      </main>
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+      </Route>
+    </Routes>
   );
 }
