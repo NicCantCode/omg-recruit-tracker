@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
+import Recruit from "./components/Recruit";
 import "./App.css";
 
 type Recruit = {
@@ -31,7 +32,16 @@ export default function App() {
     <div style={{ padding: 16 }}>
       <h1>Recruit Tracker</h1>
       {error && <p>Error: {error}</p>}
-      <pre>{JSON.stringify(rows, null, 2)}</pre>
+      {rows.map((recruit) => (
+        <Recruit
+          key={recruit.id}
+          id={recruit.id}
+          rs_name={recruit.rs_name}
+          joined_at={recruit.joined_at}
+          status={recruit.status}
+          discord_name={recruit.discord_name}
+        />
+      ))}
     </div>
   );
 }
