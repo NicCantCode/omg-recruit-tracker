@@ -1,0 +1,133 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 12px 16px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(36, 36, 36, 0.75);
+  backdrop-filter: blur(10px);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.navLink {
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid transparent;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.userName {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 650;
+}
+
+.logoutButton {
+  padding: 0.55em 0.9em;
+}
+
+/* Mobile: reduce nav, keep essentials visible */
+@media (max-width: 720px) {
+  .left {
+    min-width: 0;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .userName {
+    max-width: 120px;
+  }
+}
+
+/* Tiny screens: hide username too, keep avatar + logout */
+@media (max-width: 420px) {
+  .userName {
+    display: none;
+  }
+}

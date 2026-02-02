@@ -1,0 +1,44 @@
+import type { HeaderProps } from "../lib/propsManager";
+import { getDisplayName } from "../lib/utils/userDataHelpers";
+import styles from "./Header.module.css";
+
+export default function Header({ user, onSignOut }: HeaderProps) {
+  const displayName = getDisplayName(user);
+
+  return (
+    <header className={styles.header}>
+      <div className={styles.left}>
+        <img src="/omg_icon.png" className={styles.logo} alt="omgbrbicecreamtruck Logo" />
+        <div className={styles.titleBlock}>
+          <div className={styles.title}>Management Toolset</div>
+          <div className={styles.subtitle}>Manage your clan</div>
+        </div>
+      </div>
+
+      <nav className={styles.nav} aria-label="Primary navigation">
+        <a className={styles.navLink} href="#" onClick={(e) => e.preventDefault()}>
+          Recruits
+        </a>
+        <a className={styles.navLink} href="#" onClick={(e) => e.preventDefault()}>
+          Ranks
+        </a>
+        <a className={styles.navLink} href="#" onClick={(e) => e.preventDefault()}>
+          Settings
+        </a>
+      </nav>
+
+      <div className={styles.right}>
+        <div className={styles.user}>
+          <img src="/temp_avatar.png" className={styles.avatar} alt="" />
+          <div className={styles.userName} title={displayName}>
+            {displayName}
+          </div>
+        </div>
+
+        <button type="button" className={styles.logoutButton} onClick={() => void onSignOut()}>
+          Log out
+        </button>
+      </div>
+    </header>
+  );
+}

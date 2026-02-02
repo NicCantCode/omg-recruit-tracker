@@ -1,13 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "./lib/supabaseClient";
-import Header from "./components/Header";
-import styles from "./App.module.css";
+import { getDisplayName } from "../lib/utils/userDataHelpers";
 
-export default function App() {
+export default function AuthenticationWidget() {
   const [session, setSession] = useState<Session | null>(null);
 
   const user = session?.user ?? null;
+
+  const displayName = useMemo(() => {
+    if (!user) {
+      return "";
+    }
+    return getDisplayName(user);
+  }, [user]);
 
   useEffect(() => {
     const loadSession = async (): Promise<void> => {
@@ -41,7 +47,7 @@ export default function App() {
     });
 
     if (error) {
-      console.error("Sign out error:", error.message);
+      console.error("Discord sign-in error:", error.message);
       alert(error.message);
     }
   };
@@ -57,28 +63,20 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className={styles.loggedOutPage}>
-        <div className={styles.loggedOutCard}>
-          <div className={styles.loggedOutTitle}>Recruit Tracker</div>
-          <div className={styles.loggedOutText}>Please sign in with Discord.</div>
-
-          <button type="button" className={styles.primaryButton} onClick={() => void signInWithDiscord()}>
-            Sign in with Discord
-          </button>
-        </div>
-      </div>
+      <button type="button" onClick={signInWithDiscord}>
+        Sign in with Discord
+      </button>
     );
   }
 
   return (
-    <div className={styles.appShell}>
-      <Header user={user} onSignOut={signOut} />
-      <main className={styles.main}>
-        <div className={styles.blankState}>
-          <div className={styles.blankTitle}>Dashboard</div>
-          <div className={styles.blankText}>Recruits UI Manaement Coming Soon.</div>
-        </div>
-      </main>
+    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+      <div>
+        Signed in as <strong>{displayName}</strong>
+      </div>
+      <button type="button" onClick={signOut}>
+        Sign out
+      </button>
     </div>
   );
 }
