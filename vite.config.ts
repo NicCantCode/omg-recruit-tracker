@@ -7,6 +7,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    base: isProduction ? "/omg-recruit-tracker" : "/",
+    base: isProduction ? "/omg-recruit-tracker/" : "/",
   };
 });
