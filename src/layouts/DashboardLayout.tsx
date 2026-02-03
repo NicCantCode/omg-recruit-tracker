@@ -12,7 +12,7 @@ export default function DashboardLayout() {
 
   return (
     <div className={styles.shell}>
-      <Header user={session.user} onSignOut={signOut} />
+      <Header onSignOut={signOut} />
       <main className={styles.main}>
         <Outlet />
       </main>

@@ -1,0 +1,83 @@
+.root {
+  position: relative;
+  width: 220px;
+}
+
+.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 8px 12px;
+  border-radius: 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trigger:focus {
+  outline: 3px solid rgba(100, 108, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.triggerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret {
+  margin-left: 10px;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+
+  z-index: 20;
+
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #242424;
+
+  padding: 6px 0;
+  margin: 0;
+  list-style: none;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.option:hover,
+.optionHighlighted {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.optionSelected {
+  background: rgba(100, 108, 255, 0.22);
+}
+
+.optionDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

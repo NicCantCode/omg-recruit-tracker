@@ -1,3 +1,4 @@
+import { NavLink } from "react-router-dom";
 import type { HeaderProps } from "../lib/propsManager";
 import { useProfile } from "../lib/profile/useProfile";
 import styles from "./Header.module.css";
@@ -19,15 +20,18 @@ export default function Header({ onSignOut }: HeaderProps) {
       </div>
 
       <nav className={styles.nav} aria-label="Primary navigation">
-        <a className={styles.navLink} href="#" onClick={(e) => e.preventDefault()}>
+        <NavLink className={styles.navLink} to="/">
+          Dashboard
+        </NavLink>
+        <NavLink className={styles.navLink} to="/recruits">
           Recruits
-        </a>
-        <a className={styles.navLink} href="#" onClick={(e) => e.preventDefault()}>
+        </NavLink>
+        <NavLink className={styles.navLink} to="/ranks">
           Ranks
-        </a>
-        <a className={styles.navLink} href="#" onClick={(e) => e.preventDefault()}>
+        </NavLink>
+        <NavLink className={styles.navLink} to="/settings">
           Settings
-        </a>
+        </NavLink>
       </nav>
 
       <div className={styles.right}>

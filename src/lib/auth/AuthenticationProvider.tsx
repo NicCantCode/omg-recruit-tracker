@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { AuthenticationProviderProps } from "../propsManager";
 import { supabase } from "../supabaseClient";
@@ -7,6 +7,10 @@ import { AuthenticationContext } from "./AuthenticationContext";
 export default function AuthenticationProvider({ children }: AuthenticationProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(true);
+
+  const redirectTo = useMemo(() => {
+    return new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+  }, []);
 
   useEffect(() => {
     const loadSession = async (): Promise<void> => {
@@ -30,22 +34,22 @@ export default function AuthenticationProvider({ children }: AuthenticationProvi
     };
   }, []);
 
-  const signInWithDiscord = async (): Promise<void> => {
+  const signInWithDiscord = useCallback(async (): Promise<void> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "discord",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo,
       },
     });
 
     if (error) alert(error.message);
-  };
+  }, [redirectTo]);
 
-  const signOut = async (): Promise<void> => {
+  const signOut = useCallback(async (): Promise<void> => {
     const { error } = await supabase.auth.signOut();
 
     if (error) alert(error.message);
-  };
+  }, []);
 
   const value = useMemo(() => {
     return {
@@ -54,7 +58,7 @@ export default function AuthenticationProvider({ children }: AuthenticationProvi
       signInWithDiscord,
       signOut,
     };
-  }, [session, isAuthenticating]);
+  }, [session, isAuthenticating, signInWithDiscord, signOut]);
 
   return <AuthenticationContext.Provider value={value}>{children}</AuthenticationContext.Provider>;
 }
