@@ -1,14 +1,17 @@
 import type { HeaderProps } from "../lib/propsManager";
-import { getDisplayName } from "../lib/utils/userDataHelpers";
+import { useProfile } from "../lib/profile/useProfile";
 import styles from "./Header.module.css";
 
-export default function Header({ user, onSignOut }: HeaderProps) {
-  const displayName = getDisplayName(user);
+export default function Header({ onSignOut }: HeaderProps) {
+  const { getAvatarUrl, getDisplayName } = useProfile();
+
+  const displayName = getDisplayName();
+  const avatarUrl = getAvatarUrl();
 
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <img src="/omg_icon.png" className={styles.logo} alt="omgbrbicecreamtruck Logo" />
+        <img src="/omg_icon.png" className={styles.logo} alt="OMGBRBIceCreamTruck Logo" />
         <div className={styles.titleBlock}>
           <div className={styles.title}>Management Toolset</div>
           <div className={styles.subtitle}>Manage your clan</div>
@@ -29,7 +32,7 @@ export default function Header({ user, onSignOut }: HeaderProps) {
 
       <div className={styles.right}>
         <div className={styles.user}>
-          <img src="/temp_avatar.png" className={styles.avatar} alt="" />
+          <img src={avatarUrl} className={styles.avatar} alt="" />
           <div className={styles.userName} title={displayName}>
             {displayName}
           </div>

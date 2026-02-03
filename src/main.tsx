@@ -4,12 +4,15 @@ import { BrowserRouter } from "react-router-dom";
 import AuthenticationProvider from "./lib/auth/AuthenticationProvider.tsx";
 import App from "./App.tsx";
 import "./index.css";
+import ProfileProvider from "./lib/profile/ProfileProvider.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthenticationProvider>
-        <App />
+        <ProfileProvider>
+          <App />
+        </ProfileProvider>
       </AuthenticationProvider>
     </BrowserRouter>
   </React.StrictMode>,
