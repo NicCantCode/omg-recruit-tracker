@@ -12,7 +12,7 @@ export default function Header({ onSignOut }: HeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <img src="/omg_icon.png" className={styles.logo} alt="OMGBRBIceCreamTruck Logo" />
+        <img src={`${import.meta.env.BASE_URL}omg_icon.png`} className={styles.logo} alt="OMGBRBIceCreamTruck Logo" />
         <div className={styles.titleBlock}>
           <div className={styles.title}>Management Toolset</div>
           <div className={styles.subtitle}>Manage your clan</div>

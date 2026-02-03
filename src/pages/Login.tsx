@@ -12,7 +12,7 @@ export default function Login() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <img src="/omg_icon.png" alt="omgbrbicecreamtruck logo" className={styles.logo} />
+        <img src={`${import.meta.env.BASE_URL}omg_icon.png`} alt="omgbrbicecreamtruck logo" className={styles.logo} />
         <h1 className={styles.title}>OMGBRBIceCreamTruck</h1>
         <p className={styles.subtitle}>A clan management web application.</p>
 
