@@ -6,24 +6,15 @@ import editIcon from "../assets/edit.svg";
 import deleteIcon from "../assets/delete.svg";
 import undoIcon from "../assets/undo.svg";
 
-import type { RecruitStatus, StatusFilter } from "../lib/constants/recruitStatuses";
+import type { StatusFilter } from "../lib/constants/recruitStatuses";
 import { STATUS_FILTER_OPTIONS } from "../lib/constants/recruitStatuses";
 import type { DropdownOption } from "../components/Dropdown";
 import Dropdown from "../components/Dropdown";
 import Switch from "../components/Switch";
+import type { Recruit } from "../lib/constants/recruit";
 
-type Recruit = {
-  id: string;
-  rs_name: string;
-  discord_name: string | null;
-  status: RecruitStatus;
-  birthday: string | null;
-  notes: string | null;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
+import CreateRecruitModal from "../components/recruits/CreateRecruitModal";
+import EditRecruitModal from "../components/recruits/EditRecruitModal";
 
 type SortKey = "rs_name" | "discord_name" | "status" | "birthday" | "updated_at" | "created_at" | "deleted_at";
 type SortDirection = "ascending" | "descending";
@@ -95,8 +86,6 @@ function formatRelativeTime(iso: string): string {
 function formatBirthday(birthday: string | null): string {
   if (!birthday) return "—";
 
-  if (/^\d{2}-\d{2}$/.test(birthday)) return birthday;
-
   const t = Date.parse(birthday);
   if (Number.isNaN(t)) return birthday;
 
@@ -127,6 +116,10 @@ export default function Recruits() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(DEFAULT_SORT_DIRECTION);
   const [userHasChosenSort, setUserHasChosenSort] = useState<boolean>(false);
 
+  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
+  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
+  const [editingRecruit, setEditingRecruit] = useState<Recruit | null>(null);
+
   const [undoState, setUndoState] = useState<{
     isVisible: boolean;
     recruitId: string | null;
@@ -139,6 +132,12 @@ export default function Recruits() {
     message: "",
   });
 
+  // Saved toast (separate from undo/delete toast)
+  const [saveToast, setSaveToast] = useState<{ isVisible: boolean; message: string }>({
+    isVisible: false,
+    message: "",
+  });
+
   const statusDropdownOptions: DropdownOption[] = useMemo(() => {
     return STATUS_FILTER_OPTIONS.map((opt) => ({
       value: opt,
@@ -147,6 +146,18 @@ export default function Recruits() {
   }, []);
 
   const undoTimeoutRef = useRef<number | null>(null);
+  const saveToastTimeoutRef = useRef<number | null>(null);
+
+  function showSaveToast(message: string): void {
+    setSaveToast({ isVisible: true, message });
+
+    if (saveToastTimeoutRef.current !== null) window.clearTimeout(saveToastTimeoutRef.current);
+
+    saveToastTimeoutRef.current = window.setTimeout(() => {
+      setSaveToast({ isVisible: false, message: "" });
+      saveToastTimeoutRef.current = null;
+    }, 2200);
+  }
 
   async function loadRecruits(isCancelled: () => boolean = () => false): Promise<void> {
     setIsLoading(true);
@@ -182,11 +193,17 @@ export default function Recruits() {
     return () => {
       cancelled = true;
 
-      if (undoTimeoutRef.current !== null) {
-        window.clearTimeout(undoTimeoutRef.current);
-      }
+      if (undoTimeoutRef.current !== null) window.clearTimeout(undoTimeoutRef.current);
+      if (saveToastTimeoutRef.current !== null) window.clearTimeout(saveToastTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (isEditOpen) return;
+
+    const t = window.setTimeout(() => setEditingRecruit(null), 200);
+    return () => window.clearTimeout(t);
+  }, [isEditOpen]);
 
   function onClickHeader(nextKey: SortKey): void {
     setUserHasChosenSort(true);
@@ -408,7 +425,7 @@ export default function Recruits() {
               Reset Defaults
             </button>
 
-            <button className={styles.primaryButton} type="button" onClick={() => alert("Add Recruit (next slice)")}>
+            <button className={styles.primaryButton} type="button" onClick={() => setIsCreateOpen(true)}>
               + Add Recruit
             </button>
           </div>
@@ -441,7 +458,7 @@ export default function Recruits() {
                 value={statusFilter}
                 options={statusDropdownOptions}
                 ariaLabel="Status filter"
-                onChange={(nextValue) => setStatusFilter(nextValue as StatusFilter)}
+                onChange={(v) => setStatusFilter(v as StatusFilter)}
               />
             </div>
 
@@ -507,9 +524,7 @@ export default function Recruits() {
                           {isDeleted ? (
                             <span className={`${styles.badge} ${styles.badge_deleted}`}>deleted</span>
                           ) : (
-                            (() => {
-                              return <span className={`${styles.badge} ${styles[`badge_${statusToClassKey(r.status)}`] ?? ""}`}>{r.status}</span>;
-                            })()
+                            <span className={`${styles.badge} ${styles[`badge_${statusToClassKey(r.status)}`] ?? ""}`}>{r.status}</span>
                           )}
                         </td>
 
@@ -533,7 +548,10 @@ export default function Recruits() {
                           <button
                             className={styles.iconButton}
                             type="button"
-                            onClick={() => alert("Edit Recruit (next slice)")}
+                            onClick={() => {
+                              setEditingRecruit(r);
+                              setIsEditOpen(true);
+                            }}
                             disabled={isDeleted}
                             title={isDeleted ? "Restore first to edit" : "Edit"}
                             aria-label="Edit recruit"
@@ -546,7 +564,7 @@ export default function Recruits() {
                               className={`${styles.iconButton} ${styles.safeIconButton}`}
                               type="button"
                               onClick={() => void restoreRecruit(r.id)}
-                              title={isDeleted ? "Undo delete" : "Edit"}
+                              title="Undo delete"
                               aria-label="Undo deletion of recruit"
                             >
                               <img src={undoIcon} alt="" className={styles.iconImage} />
@@ -572,6 +590,38 @@ export default function Recruits() {
           )}
         </div>
 
+        {/* Create/Edit modals now update state in-place and show a toast */}
+        <CreateRecruitModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onSaved={({ recruit, message }) => {
+            setRecruits((current) => [recruit, ...current]);
+            showSaveToast(message);
+          }}
+        />
+
+        <EditRecruitModal
+          isOpen={isEditOpen}
+          recruit={editingRecruit}
+          onClose={() => setIsEditOpen(false)}
+          onSaved={({ recruit, message }) => {
+            setRecruits((current) => current.map((r) => (r.id === recruit.id ? recruit : r)));
+            setEditingRecruit(recruit);
+            showSaveToast(message);
+          }}
+        />
+
+        {/* Saved toast */}
+        {saveToast.isVisible && (
+          <div className={styles.toast}>
+            <div className={styles.toastText}>{saveToast.message}</div>
+            <button className={styles.toastButton} type="button" onClick={() => setSaveToast({ isVisible: false, message: "" })}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Undo/Delete toast */}
         {undoState.isVisible && (
           <div className={styles.toast}>
             <div className={styles.toastText}>{undoState.message}</div>

@@ -7,14 +7,15 @@ export default function DashboardLayout() {
   const { session, isAuthenticating, signOut } = useAuthentication();
 
   if (isAuthenticating) return null;
-
   if (!session) return null;
 
   return (
     <div className={styles.shell}>
       <Header onSignOut={signOut} />
       <main className={styles.main}>
-        <Outlet />
+        <div className={styles.content}>
+          <Outlet />
+        </div>
       </main>
     </div>
   );
