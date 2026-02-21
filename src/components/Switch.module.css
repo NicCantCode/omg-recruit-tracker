@@ -1,15 +1,16 @@
 .root {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 38px; /* align with your input/dropdown height */
+  min-height: 38px;
 }
 
-.disabled {
-  opacity: 0.55;
-  pointer-events: none;
+.rootNoLabel {
+  gap: 0;
+  min-height: 38px;
 }
 
+/* When label is shown inline, keep it tidy */
 .label {
   font-size: 13px;
   opacity: 0.9;
@@ -17,9 +18,14 @@
   user-select: none;
 }
 
+.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .switch {
-  width: 44px;
-  height: 24px;
+  width: 56px;
+  height: 30px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
@@ -27,38 +33,42 @@
   cursor: pointer;
   position: relative;
   transition:
-    background 0.12s ease,
-    border-color 0.12s ease;
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .thumb {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   position: absolute;
   top: 50%;
-  left: 3px;
+  left: 4px;
   transform: translateY(-50%);
-  transition: left 0.12s ease;
+  transition: left 0.15s ease;
 }
 
 .on {
-  background: rgba(100, 108, 255, 0.35);
-  border-color: rgba(100, 108, 255, 0.55);
+  background: rgba(140, 90, 255, 0.45);
+  border-color: rgba(140, 90, 255, 0.65);
 }
 
 .on .thumb {
-  left: 23px;
+  left: 30px;
 }
 
 .off {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.switch:focus {
-  outline: 2px solid rgba(100, 108, 255, 0.35);
-  outline-offset: 2px;
+button:focus,
+button:focus-visible {
+  outline: 3px solid rgba(100, 108, 255, 0.35);
+}
+
+.switch:active {
+  transform: translateY(1px);
 }
 
 .switch:disabled {

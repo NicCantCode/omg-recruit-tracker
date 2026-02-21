@@ -1,3 +1,5 @@
+/* Recruits.module.css (drop-in) */
+
 .page {
   min-height: 100%;
   padding: 28px 18px 48px;
@@ -47,9 +49,15 @@
 /* Controls layout */
 .controlsRow {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) 240px auto;
-  gap: 12px;
+  grid-template-columns: minmax(320px, 1fr) max-content;
+  gap: 16px;
   align-items: end;
+}
+
+.controlFieldRow {
+  height: 38px;
+  display: flex;
+  align-items: center;
 }
 
 .control {
@@ -59,8 +67,40 @@
   min-width: 0;
 }
 
-.controlRight {
-  align-items: flex-end;
+.control > :last-child {
+  height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+/* Status + Show Deleted cluster */
+.rightControls {
+  display: flex;
+  align-items: end;
+  gap: 18px;
+}
+
+/* keep Status width consistent with your old layout */
+.statusWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* show deleted wraps like a normal control */
+.showDeletedWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* This keeps the switch aligned to the “field row” baseline */
+.controlFieldRow {
+  height: 38px; /* match input/dropdown height */
+  display: flex;
+  align-items: center; /* vertically center the switch */
 }
 
 .label {
@@ -68,11 +108,6 @@
   opacity: 0.85;
   line-height: 1;
   margin: 0;
-}
-
-.labelSpacer {
-  height: 12px;
-  margin-bottom: 6px;
 }
 
 .hintText {
@@ -105,41 +140,168 @@
   padding-right: 30px;
 }
 
-.checkboxLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 38px;
-  padding: 0 2px;
-  font-size: 14px;
-  opacity: 0.9;
-  line-height: 1;
-}
-
-.checkboxLabel input {
-  transform: translateY(1px);
-}
-
-/* Reset button aligns with the "field row" too */
-.controlInlineRight {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  height: 100%;
-  padding-top: 22px;
-}
+/* --- Pagination (presentation-only) --- */
 
 .metaRow {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
 }
 
 .metaText {
   font-size: 12px;
   opacity: 0.72;
+  white-space: nowrap;
+}
+
+.paginationRight {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pageButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageInfo {
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+/* Segmented Control (page size) */
+.segmentedControl {
+  display: inline-flex;
+  border-radius: 8px; /* less rounded */
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Remove all focus glow / outline */
+.segmentedOption,
+.segmentedOption:focus,
+.segmentedOption:active,
+.segmentedOption:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Each option */
+.segmentedOption {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0; /* no inner rounding */
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  user-select: none;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Divider between options */
+.segmentedOption:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Hover */
+.segmentedOption:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* Active */
+.segmentedOptionActive {
+  background: rgba(140, 90, 255, 0.28);
+  color: white;
+  font-weight: 600;
+}
+
+/* Prev / Next buttons: match segmented control size + be truly disabled */
+.pageButton {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    transform 0.03s ease,
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.pageButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pageButton:active {
+  transform: translateY(1px);
+}
+
+/* TRUE disabled (no clicks, no hover effects, no weird cursor interaction) */
+.pageButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+}
+
+.pageButton:disabled:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Kill the default global button focus ring for these specifically */
+.pageButton,
+.pageButton:focus,
+.pageButton:active,
+.pageButton:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Page size label + segmented control */
+
+.pageSizeGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pageSizeLabel {
+  font-size: 12px;
+  opacity: 0.6;
+  white-space: nowrap;
 }
 
 /* Table */
@@ -157,7 +319,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 980px;
 }
 
 .thead {
@@ -220,34 +382,45 @@
   font-size: 14px;
 }
 
-.subCell {
-  margin-top: 4px;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
 /* Column sizing */
 .nameCol {
-  min-width: 170px;
+  width: 170px;
+  white-space: nowrap;
+}
+
+.discordCol {
+  width: 170px;
+  white-space: nowrap;
 }
 
 .statusCol {
-  width: 190px; /* widened so tags like "potential recruit" fit */
+  width: 170px; /* slightly reduced */
+}
+
+.joinedCol {
+  width: 96px;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .birthdayCol {
-  width: 140px; /* widened */
+  width: 120px; /* slightly reduced */
   white-space: nowrap;
 }
 
 .updatedCol {
-  width: 140px;
+  width: 120px; /* slightly reduced */
+  white-space: nowrap;
+}
+
+.byCol {
+  width: 100px;
   white-space: nowrap;
 }
 
 .notesCol {
-  width: 420px; /* reduced to compensate */
-  max-width: 420px;
+  width: 320px; /* shrunk */
+  max-width: 320px;
 }
 
 .notesClamp {
@@ -266,6 +439,56 @@
   white-space: nowrap;
 }
 
+.byCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Force proper avatar sizing */
+.byAvatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+
+  border-radius: 50%;
+  object-fit: cover;
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+
+  display: block;
+}
+
+/* Name next to avatar */
+.byName {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarText {
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  opacity: 0.9;
+  user-select: none;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
@@ -276,60 +499,52 @@
   color: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
-  white-space: nowrap; /* prevents wrapping */
+  white-space: nowrap;
   max-width: 100%;
 }
 
-/* New / incoming */
 .badge_new_recruit {
   background: rgba(90, 180, 255, 0.14);
   border-color: rgba(90, 180, 255, 0.35);
   color: rgba(205, 235, 255, 0.95);
 }
 
-/* Needs contact / action */
 .badge_reach_out {
   background: rgba(255, 170, 60, 0.16);
   border-color: rgba(255, 170, 60, 0.38);
   color: rgba(255, 225, 190, 0.95);
 }
 
-/* Waiting / pending response */
 .badge_follow_up {
   background: rgba(255, 215, 80, 0.15);
   border-color: rgba(255, 215, 80, 0.38);
   color: rgba(255, 245, 205, 0.95);
 }
 
-/* Strong candidate / likely to proceed */
 .badge_potential_recruit {
   background: rgba(160, 120, 255, 0.16);
   border-color: rgba(160, 120, 255, 0.38);
   color: rgba(235, 225, 255, 0.95);
 }
 
-/* Visiting / temporary */
 .badge_guesting {
   background: rgba(90, 220, 200, 0.14);
   border-color: rgba(90, 220, 200, 0.36);
   color: rgba(210, 255, 250, 0.95);
 }
 
-/* Established / trusted */
 .badge_core_member {
   background: rgba(95, 230, 130, 0.14);
   border-color: rgba(95, 230, 130, 0.36);
   color: rgba(215, 255, 225, 0.95);
 }
 
-/* Negative / disallowed */
 .badge_banned {
   background: rgba(255, 90, 90, 0.14);
   border-color: rgba(255, 90, 90, 0.34);
   color: rgba(255, 210, 210, 0.95);
 }
 
-/* Negative / greyed out */
 .badge_deleted {
   background: rgba(120, 120, 120, 0.18);
   border-color: rgba(160, 160, 160, 0.35);
@@ -481,13 +696,6 @@
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(20, 20, 20, 0.92);
-  .controlsRow {
-    display: grid;
-    grid-template-columns: minmax(320px, 1fr) 220px 170px 110px;
-    gap: 12px;
-    align-items: start;
-  }
-
   backdrop-filter: blur(10px);
   z-index: 9999;
 }
@@ -583,5 +791,16 @@
 @media (max-width: 740px) {
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .metaRow {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .paginationRight {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
   }
 }

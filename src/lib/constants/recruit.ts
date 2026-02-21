@@ -11,4 +11,5 @@ export type Recruit = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  joined_at: string | null;
 };

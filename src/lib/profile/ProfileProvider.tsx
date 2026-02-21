@@ -5,7 +5,7 @@ import { ProfileContext } from "./ProfileContext";
 import type { Profile } from "./profileTypes";
 import type { ProfileProviderProps } from "../propsManager";
 
-const PLACEHOLDER_AVATAR_URL = "/temp_avatar.png";
+const PLACEHOLDER_AVATAR_URL = "/temp_avatar.svg";
 
 function isPostgrestSingleRowError(code: string | undefined): boolean {
   return code === "PGRST116";

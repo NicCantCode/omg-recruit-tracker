@@ -16,11 +16,22 @@ import type { Recruit } from "../lib/constants/recruit";
 import CreateRecruitModal from "../components/recruits/CreateRecruitModal";
 import EditRecruitModal from "../components/recruits/EditRecruitModal";
 
-type SortKey = "rs_name" | "discord_name" | "status" | "birthday" | "updated_at" | "created_at" | "deleted_at";
+import type { Profile } from "../lib/profile/profileTypes";
+
+type RecruitRow = Recruit & {
+  joined_at?: string | null;
+};
+
+type SortKey = "rs_name" | "discord_name" | "status" | "birthday" | "joined_at" | "created_by" | "updated_at" | "created_at" | "deleted_at";
 type SortDirection = "ascending" | "descending";
 
 const DEFAULT_SORT_KEY: SortKey = "updated_at";
 const DEFAULT_SORT_DIRECTION: SortDirection = "descending";
+
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+const PLACEHOLDER_AVATAR_URL = "/temp_avatar.svg";
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
@@ -30,7 +41,7 @@ function tokenize(query: string): string[] {
   return normalize(query).split(/\s+/g).filter(Boolean);
 }
 
-function computeRelevanceScore(recruit: Recruit, tokens: string[]): number {
+function computeRelevanceScore(recruit: RecruitRow, tokens: string[]): number {
   if (tokens.length === 0) return 0;
 
   const rsName = normalize(recruit.rs_name);
@@ -92,6 +103,25 @@ function formatBirthday(birthday: string | null): string {
   return new Date(t).toLocaleDateString(undefined, { month: "short", day: "2-digit" });
 }
 
+function formatJoined(joinedAt: string | null | undefined): string {
+  if (!joinedAt) return "Guest";
+
+  const t = Date.parse(joinedAt);
+  if (Number.isNaN(t)) return joinedAt;
+
+  const diffMs = Date.now() - t;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return "—";
+  if (diffDays < 7) return `${diffDays}d`;
+  const weeks = Math.floor(diffDays / 7);
+  if (weeks < 10) return `${weeks}w`;
+  const months = Math.floor(diffDays / 30);
+  if (months < 24) return `${months}mo`;
+  const years = Math.floor(diffDays / 365);
+  return `${years}y`;
+}
+
 function toTitleCase(value: string): string {
   return value
     .split(" ")
@@ -103,23 +133,50 @@ function statusToClassKey(status: string): string {
   return status.toLowerCase().replace(/\s+/g, "_");
 }
 
+function creatorFallbackLabel(uuid: string): string {
+  return uuid.split("-")[0] ?? uuid;
+}
+
+function pickCreatorName(profile: Profile | undefined): string {
+  if (!profile) return "Unknown";
+  if (profile.display_name_override && profile.display_name_override.trim().length > 0) return profile.display_name_override;
+  if (profile.display_name && profile.display_name.trim().length > 0) return profile.display_name;
+  if (profile.user_name && profile.user_name.trim().length > 0) return profile.user_name;
+  return "Unknown";
+}
+
+function pickCreatorAvatar(profile: Profile | undefined): string {
+  if (profile?.avatar_url && profile.avatar_url.trim().length > 0) return profile.avatar_url;
+  return PLACEHOLDER_AVATAR_URL;
+}
+
 export default function Recruits() {
-  const [recruits, setRecruits] = useState<Recruit[]>([]);
+  // Load ALL recruits once, then paginate locally
+  const [recruits, setRecruits] = useState<RecruitRow[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Filters + search
   const [searchText, setSearchText] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
 
+  // Sorting
   const [sortKey, setSortKey] = useState<SortKey>(DEFAULT_SORT_KEY);
   const [sortDirection, setSortDirection] = useState<SortDirection>(DEFAULT_SORT_DIRECTION);
   const [userHasChosenSort, setUserHasChosenSort] = useState<boolean>(false);
 
-  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
-  const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-  const [editingRecruit, setEditingRecruit] = useState<Recruit | null>(null);
+  // Presentation pagination
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [pageIndex, setPageIndex] = useState<number>(0);
 
+  // Modals
+  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
+  const [editingRecruit, setEditingRecruit] = useState<RecruitRow | null>(null);
+
+  const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
+
+  // Undo toast state
   const [undoState, setUndoState] = useState<{
     isVisible: boolean;
     recruitId: string | null;
@@ -165,7 +222,7 @@ export default function Recruits() {
 
     const { data, error } = await supabase
       .from("recruits")
-      .select("id, rs_name, discord_name, status, birthday, notes, created_by, created_at, updated_at, deleted_at")
+      .select("id, rs_name, discord_name, status, birthday, joined_at, notes, created_by, created_at, updated_at, deleted_at")
       .order("updated_at", { ascending: false });
 
     if (isCancelled()) return;
@@ -173,11 +230,45 @@ export default function Recruits() {
     if (error) {
       setErrorMessage(error.message);
       setRecruits([]);
+      setProfilesById({});
       setIsLoading(false);
       return;
     }
 
-    setRecruits((data ?? []) as Recruit[]);
+    const rows = (data ?? []) as Recruit[];
+    setRecruits(rows);
+
+    // Fetch creator profiles for created_by
+    const creatorIds = Array.from(new Set(rows.map((r) => r.created_by).filter(Boolean)));
+
+    if (creatorIds.length === 0) {
+      setProfilesById({});
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: profileRows, error: profileError } = await supabase
+      .from("profiles")
+      .select(
+        "id, permission, display_name, user_name, avatar_url, provider, provider_user_id, display_name_override, last_synced_at, next_manual_refresh_at, created_at, updated_at",
+      )
+      .in("id", creatorIds);
+
+    if (isCancelled()) return;
+
+    if (profileError) {
+      // Non-fatal: recruits still load, creator column just falls back
+      setProfilesById({});
+      setIsLoading(false);
+      return;
+    }
+
+    const map: Record<string, Profile> = {};
+    for (const p of (profileRows ?? []) as Profile[]) {
+      map[p.id] = p;
+    }
+    setProfilesById(map);
+
     setIsLoading(false);
   }
 
@@ -192,18 +283,10 @@ export default function Recruits() {
 
     return () => {
       cancelled = true;
-
       if (undoTimeoutRef.current !== null) window.clearTimeout(undoTimeoutRef.current);
       if (saveToastTimeoutRef.current !== null) window.clearTimeout(saveToastTimeoutRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (isEditOpen) return;
-
-    const t = window.setTimeout(() => setEditingRecruit(null), 200);
-    return () => window.clearTimeout(t);
-  }, [isEditOpen]);
 
   function onClickHeader(nextKey: SortKey): void {
     setUserHasChosenSort(true);
@@ -217,15 +300,26 @@ export default function Recruits() {
     setSortDirection((current) => (current === "ascending" ? "descending" : "ascending"));
   }
 
+  function sortIndicator(key: SortKey): string {
+    if (sortKey !== key) return "";
+    return sortDirection === "ascending" ? " ▲" : " ▼";
+  }
+
   const tokens = useMemo(() => tokenize(searchText), [searchText]);
 
+  // Filter + sort in-memory
   const visibleRecruits = useMemo(() => {
     const filtered = recruits.filter((recruit) => {
       if (!showDeleted && recruit.deleted_at !== null) return false;
-      if (statusFilter !== "all" && recruit.status !== statusFilter) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "deleted") {
+          if (recruit.deleted_at === null) return false;
+        } else {
+          if (recruit.status !== statusFilter) return false;
+        }
+      }
 
       if (tokens.length === 0) return true;
-
       const score = computeRelevanceScore(recruit, tokens);
       return score > 0;
     });
@@ -261,6 +355,16 @@ export default function Recruits() {
           else if (b.recruit.birthday === null) comparison = -1;
           else comparison = compareDates(a.recruit.birthday, b.recruit.birthday);
           break;
+        case "joined_at":
+          if (!a.recruit.joined_at && !b.recruit.joined_at) comparison = 0;
+          else if (!a.recruit.joined_at)
+            comparison = 1; // guests last
+          else if (!b.recruit.joined_at) comparison = -1;
+          else comparison = compareDates(a.recruit.joined_at, b.recruit.joined_at);
+          break;
+        case "created_by":
+          comparison = a.recruit.created_by.toLowerCase().localeCompare(b.recruit.created_by.toLowerCase());
+          break;
         case "updated_at":
           comparison = compareDates(a.recruit.updated_at, b.recruit.updated_at);
           break;
@@ -285,6 +389,34 @@ export default function Recruits() {
 
     return decorated.map((d) => d.recruit);
   }, [recruits, showDeleted, statusFilter, tokens, sortKey, sortDirection, userHasChosenSort]);
+
+  // Reset to page 1 when the view changes
+  useEffect(() => {
+    setPageIndex(0);
+  }, [searchText, statusFilter, showDeleted, pageSize]);
+
+  const totalCount = visibleRecruits.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  function clampPageIndex(next: number): number {
+    if (next < 0) return 0;
+    const max = Math.max(0, totalPages - 1);
+    if (next > max) return max;
+    return next;
+  }
+
+  // Keep pageIndex valid if page count shrinks
+  useEffect(() => {
+    setPageIndex((p) => clampPageIndex(p));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalPages]);
+
+  const pageSlice = useMemo(() => {
+    const start = pageIndex * pageSize;
+    return visibleRecruits.slice(start, start + pageSize);
+  }, [visibleRecruits, pageIndex, pageSize]);
+
+  const shownCountText = `Showing ${pageSlice.length} of ${totalCount} (Total in DB: ${recruits.length})`;
 
   async function softDeleteRecruit(recruitId: string): Promise<void> {
     const nowIso = new Date().toISOString();
@@ -368,13 +500,6 @@ export default function Recruits() {
     }
   }
 
-  function sortIndicator(key: SortKey): string {
-    if (sortKey !== key) return "";
-    return sortDirection === "ascending" ? " ▲" : " ▼";
-  }
-
-  const shownCountText = `Showing ${visibleRecruits.length} of ${recruits.length}`;
-
   if (isLoading) {
     return (
       <div className={styles.page}>
@@ -420,6 +545,8 @@ export default function Recruits() {
                 setSortKey(DEFAULT_SORT_KEY);
                 setSortDirection(DEFAULT_SORT_DIRECTION);
                 setUserHasChosenSort(false);
+                setPageSize(DEFAULT_PAGE_SIZE);
+                setPageIndex(0);
               }}
             >
               Reset Defaults
@@ -447,36 +574,87 @@ export default function Recruits() {
                 }}
                 placeholder="Search RS name, Discord name, or notes…"
               />
-              {tokens.length > 0 && !userHasChosenSort && <div className={styles.hintText}>Sorting by relevance (name → discord → notes).</div>}
             </div>
 
-            <div className={styles.control}>
-              <label className={styles.label} htmlFor="status">
-                Status Filter
-              </label>
-              <Dropdown
-                value={statusFilter}
-                options={statusDropdownOptions}
-                ariaLabel="Status filter"
-                onChange={(v) => setStatusFilter(v as StatusFilter)}
-              />
-            </div>
+            <div className={styles.rightControls}>
+              <div className={styles.statusWrap}>
+                <label className={styles.label} htmlFor="status">
+                  Status Filter
+                </label>
+                <Dropdown
+                  value={statusFilter}
+                  options={statusDropdownOptions}
+                  ariaLabel="Status filter"
+                  onChange={(v) => setStatusFilter(v as StatusFilter)}
+                />
+              </div>
 
-            <div className={styles.controlInline}>
-              <Switch checked={showDeleted} onChange={setShowDeleted} label="Show Deleted" />
+              <div className={styles.showDeletedWrap}>
+                <label className={styles.label}>Show Deleted</label>
+                <div className={styles.controlFieldRow}>
+                  <Switch checked={showDeleted} onChange={setShowDeleted} ariaLabel="Show Deleted" />
+                </div>
+              </div>
             </div>
           </div>
 
           <div className={styles.metaRow}>
             <div className={styles.metaText}>{shownCountText}</div>
+
+            <div className={styles.paginationRight}>
+              <div className={styles.pageButtons}>
+                <button
+                  className={styles.pageButton}
+                  type="button"
+                  onClick={() => setPageIndex((p) => clampPageIndex(p - 1))}
+                  disabled={pageIndex <= 0}
+                >
+                  ← Prev
+                </button>
+
+                <div className={styles.pageInfo}>
+                  Page <b>{pageIndex + 1}</b> of <b>{totalPages}</b>
+                </div>
+
+                <button
+                  className={styles.pageButton}
+                  type="button"
+                  onClick={() => setPageIndex((p) => clampPageIndex(p + 1))}
+                  disabled={pageIndex >= totalPages - 1}
+                >
+                  Next →
+                </button>
+              </div>
+
+              <div className={styles.pageSizeGroup}>
+                <span className={styles.pageSizeLabel}>Per page</span>
+
+                <div className={styles.segmentedControl}>
+                  {PAGE_SIZE_OPTIONS.map((size) => {
+                    const isActive = pageSize === size;
+
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`${styles.segmentedOption} ${isActive ? styles.segmentedOptionActive : ""}`}
+                        onClick={() => setPageSize(size)}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className={styles.tableCard}>
-          {visibleRecruits.length === 0 ? (
+          {pageSlice.length === 0 ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyTitle}>No recruits found</div>
-              <div className={styles.emptyText}>Try adjusting your search or filters.</div>
+              <div className={styles.emptyText}>Try adjusting your search, filters, or show deleted toggle.</div>
             </div>
           ) : (
             <div className={styles.tableWrap}>
@@ -486,11 +664,17 @@ export default function Recruits() {
                     <th className={`${styles.th} ${styles.nameCol}`} role="button" onClick={() => onClickHeader("rs_name")} title="Sort">
                       RS Name{sortIndicator("rs_name")}
                     </th>
-                    <th className={styles.th} role="button" onClick={() => onClickHeader("discord_name")} title="Sort">
+
+                    <th className={`${styles.th} ${styles.discordCol}`} role="button" onClick={() => onClickHeader("discord_name")} title="Sort">
                       Discord{sortIndicator("discord_name")}
                     </th>
+
                     <th className={`${styles.th} ${styles.statusCol}`} role="button" onClick={() => onClickHeader("status")} title="Sort">
                       Status{sortIndicator("status")}
+                    </th>
+
+                    <th className={`${styles.th} ${styles.joinedCol}`} role="button" onClick={() => onClickHeader("joined_at")} title="Sort">
+                      Joined{sortIndicator("joined_at")}
                     </th>
 
                     <th className={`${styles.th} ${styles.birthdayCol}`} role="button" onClick={() => onClickHeader("birthday")} title="Sort">
@@ -503,12 +687,21 @@ export default function Recruits() {
                       Updated{sortIndicator("updated_at")}
                     </th>
 
+                    <th className={`${styles.th} ${styles.byCol}`} role="button" onClick={() => onClickHeader("created_by")} title="Sort">
+                      Added By{sortIndicator("created_by")}
+                    </th>
+
                     <th className={styles.thActions}>Actions</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {visibleRecruits.map((r) => {
+                  {pageSlice.map((r) => {
                     const isDeleted = r.deleted_at !== null;
+                    const creatorProfile = profilesById[r.created_by];
+                    const creatorName = pickCreatorName(creatorProfile);
+                    const creatorAvatar = pickCreatorAvatar(creatorProfile);
+                    const creatorFallback = creatorFallbackLabel(r.created_by);
 
                     return (
                       <tr key={r.id} className={isDeleted ? styles.rowDeleted : styles.row}>
@@ -516,8 +709,8 @@ export default function Recruits() {
                           <div className={styles.primaryCellNoWrap}>{r.rs_name}</div>
                         </td>
 
-                        <td className={styles.td}>
-                          <div className={styles.primaryCell}>{r.discord_name ?? "—"}</div>
+                        <td className={`${styles.td} ${styles.discordCol}`}>
+                          <div className={styles.primaryCellNoWrap}>{r.discord_name ?? "—"}</div>
                         </td>
 
                         <td className={styles.td}>
@@ -528,8 +721,17 @@ export default function Recruits() {
                           )}
                         </td>
 
+                        <td className={`${styles.td} ${styles.joinedCol}`}>
+                          <div
+                            className={styles.primaryCellNoWrap}
+                            title={r.joined_at ? new Date(r.joined_at).toLocaleString() : "Not a member yet (guest)"}
+                          >
+                            {formatJoined(r.joined_at)}
+                          </div>
+                        </td>
+
                         <td className={`${styles.td} ${styles.birthdayCol}`}>
-                          <div className={styles.primaryCell}>{formatBirthday(r.birthday)}</div>
+                          <div className={styles.primaryCellNoWrap}>{formatBirthday(r.birthday)}</div>
                         </td>
 
                         <td className={`${styles.td} ${styles.notesCol}`}>
@@ -544,14 +746,23 @@ export default function Recruits() {
                           </div>
                         </td>
 
+                        <td className={`${styles.td} ${styles.byCol}`}>
+                          <div className={styles.byCell} title={`${creatorName} (${r.created_by})`}>
+                            <img
+                              className={styles.byAvatar}
+                              src={creatorAvatar}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                              title={creatorName !== "Unknown" ? creatorName : creatorFallback}
+                            />
+                          </div>
+                        </td>
+
                         <td className={styles.tdActions}>
                           <button
                             className={styles.iconButton}
                             type="button"
-                            onClick={() => {
-                              setEditingRecruit(r);
-                              setIsEditOpen(true);
-                            }}
+                            onClick={() => setEditingRecruit(r)}
                             disabled={isDeleted}
                             title={isDeleted ? "Restore first to edit" : "Edit"}
                             aria-label="Edit recruit"
@@ -590,28 +801,27 @@ export default function Recruits() {
           )}
         </div>
 
-        {/* Create/Edit modals now update state in-place and show a toast */}
         <CreateRecruitModal
           isOpen={isCreateOpen}
           onClose={() => setIsCreateOpen(false)}
           onSaved={({ recruit, message }) => {
-            setRecruits((current) => [recruit, ...current]);
+            setRecruits((current) => [recruit as RecruitRow, ...current]);
             showSaveToast(message);
+            setPageIndex(0);
           }}
         />
 
         <EditRecruitModal
-          isOpen={isEditOpen}
+          isOpen={editingRecruit !== null}
           recruit={editingRecruit}
-          onClose={() => setIsEditOpen(false)}
+          onClose={() => setEditingRecruit(null)}
           onSaved={({ recruit, message }) => {
-            setRecruits((current) => current.map((r) => (r.id === recruit.id ? recruit : r)));
-            setEditingRecruit(recruit);
+            setRecruits((current) => current.map((r) => (r.id === (recruit as RecruitRow).id ? (recruit as RecruitRow) : r)));
+            setEditingRecruit(recruit as RecruitRow);
             showSaveToast(message);
           }}
         />
 
-        {/* Saved toast */}
         {saveToast.isVisible && (
           <div className={styles.toast}>
             <div className={styles.toastText}>{saveToast.message}</div>
@@ -621,7 +831,6 @@ export default function Recruits() {
           </div>
         )}
 
-        {/* Undo/Delete toast */}
         {undoState.isVisible && (
           <div className={styles.toast}>
             <div className={styles.toastText}>{undoState.message}</div>

@@ -34,7 +34,8 @@ export type DropdownProps = {
 export type SwitchProps = {
   checked: boolean;
   onChange: (next: boolean) => void;
-  label: string;
+  label?: string;
+  ariaLabel?: string;
   disabled?: boolean;
   id?: string;
 };
