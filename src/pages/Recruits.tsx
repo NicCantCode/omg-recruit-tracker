@@ -752,7 +752,7 @@ export default function Recruits() {
                           <div className={styles.byCell} title={`${creatorName} (${r.created_by})`}>
                             <img
                               className={styles.byAvatar}
-                              src={creatorAvatar}
+                              src={`${import.meta.env.BASE_URL}${creatorAvatar}`}
                               alt=""
                               referrerPolicy="no-referrer"
                               title={creatorName !== "Unknown" ? creatorName : creatorFallback}
