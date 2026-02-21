@@ -53,7 +53,7 @@ function pickActorName(p: AuditActorProfile | undefined, fallback: string): stri
 
 function pickActorAvatar(p: AuditActorProfile | undefined): string {
   if (p?.avatar_url && p.avatar_url.trim().length > 0) return p.avatar_url;
-  return PLACEHOLDER_AVATAR_URL;
+  return `${import.meta.env.BASE_URL}${PLACEHOLDER_AVATAR_URL}`;
 }
 
 function toTitleCase(value: string): string {

@@ -98,7 +98,7 @@ export default function ProfileProvider({ children }: ProfileProviderProps) {
     if (profile?.avatar_url && profile.avatar_url.trim().length > 0) {
       return profile.avatar_url;
     }
-    return PLACEHOLDER_AVATAR_URL;
+    return `${import.meta.env.BASE_URL}${PLACEHOLDER_AVATAR_URL}`;
   }, [profile]);
 
   const value = useMemo(() => {
