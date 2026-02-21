@@ -148,7 +148,7 @@ function pickCreatorName(profile: Profile | undefined): string {
 
 function pickCreatorAvatar(profile: Profile | undefined): string {
   if (profile?.avatar_url && profile.avatar_url.trim().length > 0) return profile.avatar_url;
-  return PLACEHOLDER_AVATAR_URL;
+  return `${import.meta.env.BASE_URL}${PLACEHOLDER_AVATAR_URL}`;
 }
 
 export default function Recruits() {
@@ -752,7 +752,7 @@ export default function Recruits() {
                           <div className={styles.byCell} title={`${creatorName} (${r.created_by})`}>
                             <img
                               className={styles.byAvatar}
-                              src={`${import.meta.env.BASE_URL}${creatorAvatar}`}
+                              src={creatorAvatar}
                               alt=""
                               referrerPolicy="no-referrer"
                               title={creatorName !== "Unknown" ? creatorName : creatorFallback}
