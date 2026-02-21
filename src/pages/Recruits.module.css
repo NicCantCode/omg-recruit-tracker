@@ -368,12 +368,17 @@
   margin-left: 8px;
 }
 
+.row {
+  cursor: pointer;
+}
+
 .row:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
 .rowDeleted {
   opacity: 0.6;
+  cursor: pointer;
 }
 
 .primaryCell {

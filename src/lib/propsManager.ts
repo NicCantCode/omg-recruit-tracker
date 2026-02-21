@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { DropdownOption } from "../components/Dropdown";
 import type { Recruit } from "./constants/recruit";
+import type { Profile } from "./profile/profileTypes";
 
 export type HeaderProps = {
   onSignOut: () => Promise<void>;
@@ -67,4 +68,12 @@ export type EditRecruitModalProps = {
   recruit: Recruit | null;
   onClose: () => void;
   onSaved: (payload: { recruit: Recruit; message: string }) => void;
+};
+
+export type RecruitDetailsModalProps = {
+  isOpen: boolean;
+  recruit: Recruit | null;
+  creatorProfile?: Profile;
+  onClose: () => void;
+  onEdit?: () => void;
 };

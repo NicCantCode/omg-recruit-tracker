@@ -15,6 +15,7 @@ import type { Recruit } from "../lib/constants/recruit";
 
 import CreateRecruitModal from "../components/recruits/CreateRecruitModal";
 import EditRecruitModal from "../components/recruits/EditRecruitModal";
+import RecruitDetailsModal from "../components/recruits/RecruitDetailsModal";
 
 import type { Profile } from "../lib/profile/profileTypes";
 
@@ -104,7 +105,7 @@ function formatBirthday(birthday: string | null): string {
 }
 
 function formatJoined(joinedAt: string | null | undefined): string {
-  if (!joinedAt) return "Guest";
+  if (!joinedAt) return "—";
 
   const t = Date.parse(joinedAt);
   if (Number.isNaN(t)) return joinedAt;
@@ -117,7 +118,7 @@ function formatJoined(joinedAt: string | null | undefined): string {
   const weeks = Math.floor(diffDays / 7);
   if (weeks < 10) return `${weeks}w`;
   const months = Math.floor(diffDays / 30);
-  if (months < 24) return `${months}mo`;
+  if (months < 12) return `${months}mo`;
   const years = Math.floor(diffDays / 365);
   return `${years}y`;
 }
@@ -173,6 +174,7 @@ export default function Recruits() {
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [editingRecruit, setEditingRecruit] = useState<RecruitRow | null>(null);
+  const [viewingRecruit, setViewingRecruit] = useState<RecruitRow | null>(null);
 
   const [profilesById, setProfilesById] = useState<Record<string, Profile>>({});
 
@@ -704,7 +706,7 @@ export default function Recruits() {
                     const creatorFallback = creatorFallbackLabel(r.created_by);
 
                     return (
-                      <tr key={r.id} className={isDeleted ? styles.rowDeleted : styles.row}>
+                      <tr key={r.id} className={isDeleted ? styles.rowDeleted : styles.row} onClick={() => setViewingRecruit(r)}>
                         <td className={`${styles.td} ${styles.nameCol}`}>
                           <div className={styles.primaryCellNoWrap}>{r.rs_name}</div>
                         </td>
@@ -762,7 +764,10 @@ export default function Recruits() {
                           <button
                             className={styles.iconButton}
                             type="button"
-                            onClick={() => setEditingRecruit(r)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingRecruit(r);
+                            }}
                             disabled={isDeleted}
                             title={isDeleted ? "Restore first to edit" : "Edit"}
                             aria-label="Edit recruit"
@@ -774,7 +779,10 @@ export default function Recruits() {
                             <button
                               className={`${styles.iconButton} ${styles.safeIconButton}`}
                               type="button"
-                              onClick={() => void restoreRecruit(r.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void restoreRecruit(r.id);
+                              }}
                               title="Undo delete"
                               aria-label="Undo deletion of recruit"
                             >
@@ -784,7 +792,10 @@ export default function Recruits() {
                             <button
                               className={`${styles.iconButton} ${styles.dangerIconButton}`}
                               type="button"
-                              onClick={() => void softDeleteRecruit(r.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void softDeleteRecruit(r.id);
+                              }}
                               title="Delete"
                               aria-label="Delete recruit"
                             >
@@ -819,6 +830,28 @@ export default function Recruits() {
             setRecruits((current) => current.map((r) => (r.id === (recruit as RecruitRow).id ? (recruit as RecruitRow) : r)));
             setEditingRecruit(recruit as RecruitRow);
             showSaveToast(message);
+          }}
+        />
+
+        <RecruitDetailsModal
+          isOpen={viewingRecruit !== null}
+          recruit={viewingRecruit}
+          creatorProfile={viewingRecruit ? profilesById[viewingRecruit.created_by] : undefined}
+          onClose={() => setViewingRecruit(null)}
+          onEdit={() => {
+            if (!viewingRecruit) return;
+
+            const r = viewingRecruit;
+
+            // 1) Open edit immediately
+            setEditingRecruit(r);
+
+            // 2) Close details AFTER the edit modal has had a chance to paint its overlay
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => {
+                setViewingRecruit(null);
+              });
+            });
           }}
         />
 

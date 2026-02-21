@@ -6,7 +6,7 @@ import type { Profile } from "../lib/profile/profileTypes";
 import styles from "./Settings.module.css";
 import Dropdown from "../components/Dropdown";
 
-type SettingsTab = "user" | "owner";
+type SettingsTab = "user" | "owner" | "audit";
 
 type OwnerListRow = {
   id: string;
@@ -18,7 +18,146 @@ type OwnerListRow = {
   created_at: string;
 };
 
+type AuditAction = "create" | "update" | "soft_delete" | "restore";
+
+type AuditLogRow = {
+  id: string;
+  created_at: string;
+  actor_id: string | null;
+  entity_type: string;
+  entity_id: string;
+  entity_label: string | null;
+  action: AuditAction;
+  changes: Record<string, { old: unknown; new: unknown }>;
+};
+
+type AuditActorProfile = {
+  id: string;
+  display_name: string | null;
+  user_name: string | null;
+  avatar_url: string | null;
+  display_name_override: string | null;
+  permission: string;
+};
+
 const SETTINGS_TAB_STORAGE_KEY = "settings:selectedTab";
+const PLACEHOLDER_AVATAR_URL = "/temp_avatar.svg";
+
+function pickActorName(p: AuditActorProfile | undefined, fallback: string): string {
+  if (!p) return fallback;
+  if (p.display_name_override && p.display_name_override.trim().length > 0) return p.display_name_override;
+  if (p.display_name && p.display_name.trim().length > 0) return p.display_name;
+  if (p.user_name && p.user_name.trim().length > 0) return p.user_name;
+  return fallback;
+}
+
+function pickActorAvatar(p: AuditActorProfile | undefined): string {
+  if (p?.avatar_url && p.avatar_url.trim().length > 0) return p.avatar_url;
+  return PLACEHOLDER_AVATAR_URL;
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function actionToVerb(action: AuditAction): string {
+  switch (action) {
+    case "create":
+      return "created";
+    case "soft_delete":
+      return "deleted";
+    case "restore":
+      return "restored";
+    case "update":
+      return "updated";
+    default:
+      return "updated";
+  }
+}
+
+function fieldLabel(key: string): string {
+  switch (key) {
+    case "rs_name":
+      return "RS Name";
+    case "discord_name":
+      return "Discord Name";
+    case "status":
+      return "Status";
+    case "birthday":
+      return "Birthday";
+    case "joined_at":
+      return "Joined";
+    case "notes":
+      return "Notes";
+    case "deleted_at":
+      return "Deleted At";
+    default:
+      return key;
+  }
+}
+
+function formatValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return "—";
+
+  // Strings that might be dates
+  if (typeof value === "string") {
+    // notes: show empty nicely
+    if (key === "notes") {
+      const t = value.trim();
+      return t.length ? t : "—";
+    }
+
+    const parsed = Date.parse(value);
+    // treat ISO strings as dates only for these fields
+    if (["birthday", "joined_at", "created_at", "updated_at", "deleted_at"].includes(key) && !Number.isNaN(parsed)) {
+      return new Date(parsed).toLocaleString();
+    }
+
+    // status: title case
+    if (key === "status") return toTitleCase(value);
+
+    return value.length ? value : "—";
+  }
+
+  // fallback for non-string values
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function buildSummary(row: AuditLogRow): { headline: string; sub?: string } {
+  const label = row.entity_label ?? "Recruit";
+  const changes = row.changes ?? {};
+  const keys = Object.keys(changes);
+
+  if (row.action === "create") return { headline: `recruit`, sub: label };
+  if (row.action === "soft_delete") return { headline: `recruit`, sub: label };
+  if (row.action === "restore") return { headline: `recruit`, sub: label };
+
+  // update
+  if (keys.length === 0) return { headline: `recruit`, sub: label };
+
+  if (keys.length === 1) {
+    const k = keys[0]!;
+    const oldV = formatValue(k, changes[k]?.old);
+    const newV = formatValue(k, changes[k]?.new);
+
+    return {
+      headline: `${fieldLabel(k)}`,
+      sub: `${label}: ${oldV} → ${newV}`,
+    };
+  }
+
+  return {
+    headline: `${keys.length} fields`,
+    sub: label,
+  };
+}
 
 function formatDate(value: string | null): string {
   if (!value) return "-";
@@ -32,7 +171,7 @@ function formatDate(value: string | null): string {
 function readStoredTab(): SettingsTab | null {
   const raw = localStorage.getItem(SETTINGS_TAB_STORAGE_KEY);
 
-  if (raw === "user" || raw === "owner") return raw;
+  if (raw === "user" || raw === "owner" || raw === "audit") return raw;
 
   return null;
 }
@@ -43,6 +182,10 @@ function writeStoredTab(tab: SettingsTab): void {
 
 function isOwner(profile: Profile | null): boolean {
   return profile?.permission === "owner";
+}
+
+function canViewAudit(profile: Profile | null): boolean {
+  return profile?.permission === "owner" || profile?.permission === "administrator";
 }
 
 function isLocked(profile: Profile | null): boolean {
@@ -70,38 +213,124 @@ export default function Settings() {
   const [adminError, setAdminError] = useState<string>("");
   const [pendingPermissionUpdates, setPendingPermissionUpdates] = useState<Record<string, boolean>>({});
 
+  // Audit Log Settings State
+
+  const [auditRows, setAuditRows] = useState<AuditLogRow[]>([]);
+  const [auditActorsById, setAuditActorsById] = useState<Record<string, AuditActorProfile>>({});
+  const [isAuditLoading, setIsAuditLoading] = useState<boolean>(false);
+  const [auditError, setAuditError] = useState<string>("");
+
   const userId = session?.user?.id ?? "";
 
   const displayName = useMemo(() => getDisplayName(), [getDisplayName]);
   const avatarUrl = useMemo(() => getAvatarUrl(), [getAvatarUrl]);
 
   const owner = useMemo(() => isOwner(profile), [profile]);
+  const canAudit = useMemo(() => canViewAudit(profile), [profile]);
+
   const locked = useMemo(() => isLocked(profile), [profile]);
 
-  // Initialize tab from localStorage (Owners only)
+  const loadAuditLog = async (): Promise<void> => {
+    setAuditError("");
+    setIsAuditLoading(true);
+
+    const { data, error } = await supabase
+      .from("audit_log")
+      .select("id, created_at, actor_id, entity_type, entity_id, entity_label, action, changes")
+      .eq("entity_type", "recruit")
+      .order("created_at", { ascending: false })
+      .limit(250);
+
+    if (error) {
+      setAuditError(error.message);
+      setAuditRows([]);
+      setAuditActorsById({});
+      setIsAuditLoading(false);
+      return;
+    }
+
+    const rows = ((data as AuditLogRow[]) ?? []).map((r) => ({
+      ...r,
+      changes: (r.changes ?? {}) as AuditLogRow["changes"],
+    }));
+
+    setAuditRows(rows);
+
+    // Fetch actors (pretty names/avatars) via RPC
+    const actorIds = Array.from(new Set(rows.map((r) => r.actor_id).filter(Boolean))) as string[];
+
+    if (actorIds.length === 0) {
+      setAuditActorsById({});
+      setIsAuditLoading(false);
+      return;
+    }
+
+    const { data: actorData, error: actorError } = await supabase.rpc("list_profiles_for_audit", {
+      actor_ids: actorIds,
+    });
+
+    if (actorError) {
+      // Non-fatal: still show audit, just fallback to short IDs
+      setAuditActorsById({});
+      setIsAuditLoading(false);
+      return;
+    }
+
+    const map: Record<string, AuditActorProfile> = {};
+    for (const p of (actorData as AuditActorProfile[]) ?? []) {
+      map[p.id] = p;
+    }
+    setAuditActorsById(map);
+
+    setIsAuditLoading(false);
+  };
+
+  useEffect(() => {
+    if (!canAudit || tab !== "audit") return;
+    void loadAuditLog();
+  }, [canAudit, tab]);
+
   useEffect(() => {
     if (isProfileLoading) return;
 
-    if (!owner) {
+    // If you can't see admin/audit tabs, force user
+    if (!owner && !canAudit) {
       setTab("user");
       return;
     }
 
     const saved = readStoredTab();
+
+    // Prevent invalid saved tabs based on permissions
+    if (saved === "owner" && !owner) {
+      setTab("user");
+      return;
+    }
+
+    if (saved === "audit" && !canAudit) {
+      setTab("user");
+      return;
+    }
+
     setTab(saved ?? "user");
-  }, [owner, isProfileLoading]);
+  }, [owner, canAudit, isProfileLoading]);
 
   // Persist tab selection
   useEffect(() => {
-    if (!owner) return;
+    // Only persist if user can actually use extra tabs
+    if (!owner && !canAudit) return;
 
     writeStoredTab(tab);
-  }, [tab, owner]);
+  }, [tab, owner, canAudit]);
 
   // Kick user out of admin panel if their permissions change for any reason
   useEffect(() => {
-    if (!owner) setTab("user");
-  }, [owner]);
+    // If on owner tab and you stop being owner, kick out
+    if (tab === "owner" && !owner) setTab("user");
+
+    // If on audit tab and you lose audit permission, kick out
+    if (tab === "audit" && !canAudit) setTab("user");
+  }, [owner, canAudit, tab]);
 
   // Keep input in sync with profile value
   useEffect(() => {
@@ -243,19 +472,117 @@ export default function Settings() {
       <div className={styles.headerRow}>
         <div className={styles.pageTitle}>Settings</div>
 
-        {owner ? (
+        {owner || canAudit ? (
           <div className={styles.tabs}>
             <button type="button" className={`${styles.tabButton} ${tab === "user" ? styles.tabActive : ""}`} onClick={() => setTab("user")}>
               User
             </button>
-            <button type="button" className={`${styles.tabButton} ${tab === "owner" ? styles.tabActive : ""}`} onClick={() => setTab("owner")}>
-              Administration
-            </button>
+
+            {canAudit ? (
+              <button type="button" className={`${styles.tabButton} ${tab === "audit" ? styles.tabActive : ""}`} onClick={() => setTab("audit")}>
+                Audit Log
+              </button>
+            ) : null}
+
+            {owner ? (
+              <button type="button" className={`${styles.tabButton} ${tab === "owner" ? styles.tabActive : ""}`} onClick={() => setTab("owner")}>
+                Administration
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
 
-      {tab === "owner" && owner ? (
+      {tab === "audit" && canAudit ? (
+        <section className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Audit Log</h2>
+            <button type="button" onClick={() => void loadAuditLog()} disabled={isAuditLoading}>
+              Refresh
+            </button>
+          </div>
+
+          <p className={styles.muted}>
+            Tracks recruit changes. Visible to administrators and owners only. Audit log entries auto-delete when they are {`>`} 6 months old.
+          </p>
+
+          {auditError ? <div className={styles.errorBanner}>{auditError}</div> : null}
+
+          <div className={styles.auditList}>
+            {isAuditLoading ? (
+              <div className={styles.muted}>Loading…</div>
+            ) : auditRows.length === 0 ? (
+              <div className={styles.muted}>No audit entries found.</div>
+            ) : (
+              auditRows.map((row) => {
+                const actorId = row.actor_id ?? "";
+                const actor = actorId ? auditActorsById[actorId] : undefined;
+
+                const actorFallback = actorId ? actorId.split("-")[0] : "Unknown";
+                const actorName = pickActorName(actor, actorFallback);
+                const actorAvatar = pickActorAvatar(actor);
+
+                const verb = actionToVerb(row.action);
+                const summary = buildSummary(row);
+
+                const changes = row.changes ?? {};
+                const changeKeys = Object.keys(changes);
+
+                return (
+                  <div key={row.id} className={styles.auditItem}>
+                    <div className={styles.auditTopRow}>
+                      <div className={styles.auditActor}>
+                        <img src={actorAvatar} alt="" className={styles.auditAvatar} referrerPolicy="no-referrer" />
+                        <div className={styles.auditActorText}>
+                          <div className={styles.auditActorName}>
+                            {actorName}
+                            {actorId === userId ? <span className={styles.auditYou}> (you)</span> : null}
+                          </div>
+                          <div className={styles.auditWhen} title={formatDate(row.created_at)}>
+                            {formatDate(row.created_at)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={styles.auditAction}>
+                        <span className={styles.auditActionPill}>{toTitleCase(row.action.replace("_", " "))}</span>
+                      </div>
+                    </div>
+
+                    <div className={styles.auditMessage}>
+                      <span className={styles.auditActorInline}>{actorName}</span> {verb}{" "}
+                      <span className={styles.auditHeadline}>{summary.headline}</span>
+                      {summary.sub ? <span className={styles.auditSub}> — {summary.sub}</span> : null}
+                    </div>
+
+                    {row.action === "update" && changeKeys.length > 0 ? (
+                      <details className={styles.auditDetails}>
+                        <summary className={styles.auditDetailsSummary}>View changes</summary>
+                        <div className={styles.auditChanges}>
+                          {changeKeys.map((k) => {
+                            const oldV = formatValue(k, changes[k]?.old);
+                            const newV = formatValue(k, changes[k]?.new);
+                            return (
+                              <div key={k} className={styles.auditChangeRow}>
+                                <div className={styles.auditChangeKey}>{fieldLabel(k)}</div>
+                                <div className={styles.auditChangeVal}>
+                                  <span className={styles.auditOld}>{oldV}</span>
+                                  <span className={styles.auditArrow}>→</span>
+                                  <span className={styles.auditNew}>{newV}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+      ) : tab === "owner" && owner ? (
         <section className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>User Management</h2>

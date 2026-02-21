@@ -26,9 +26,9 @@ export default function Header({ onSignOut }: HeaderProps) {
         <NavLink className={styles.navLink} to="/recruits">
           Recruits
         </NavLink>
-        <NavLink className={styles.navLink} to="/ranks">
+        {/* <NavLink className={styles.navLink} to="/ranks">
           Ranks
-        </NavLink>
+        </NavLink> */}
         <NavLink className={styles.navLink} to="/settings">
           Settings
         </NavLink>

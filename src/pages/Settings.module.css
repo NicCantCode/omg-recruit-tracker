@@ -272,6 +272,154 @@
   font-size: 0.9rem;
 }
 
+.auditList {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.auditItem {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.auditTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auditActor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.auditAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.auditActorText {
+  min-width: 0;
+}
+
+.auditActorName {
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 520px;
+}
+
+.auditYou {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 800;
+}
+
+.auditWhen {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.85rem;
+  margin-top: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.auditAction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auditActionPill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 850;
+  border: 1px solid rgba(100, 108, 255, 0.55);
+  background: rgba(100, 108, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+}
+
+.auditMessage {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.35;
+}
+
+.auditActorInline {
+  font-weight: 900;
+}
+
+.auditHeadline {
+  font-weight: 900;
+}
+
+.auditSub {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.auditDetails {
+  margin-top: 10px;
+}
+
+.auditDetailsSummary {
+  cursor: pointer;
+  user-select: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 800;
+}
+
+.auditChanges {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  padding-left: 12px;
+}
+
+.auditChangeRow {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.auditChangeKey {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 850;
+  font-size: 0.9rem;
+}
+
+.auditChangeVal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.auditOld,
+.auditNew {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.86);
+  overflow-wrap: anywhere;
+}
+
+.auditArrow {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 900;
+}
+
 /* Mobile layout tweaks */
 @media (max-width: 720px) {
   .headerRow {
@@ -281,5 +429,13 @@
 
   .table {
     min-width: 680px;
+  }
+
+  .auditChangeRow {
+    grid-template-columns: 1fr;
+  }
+
+  .auditActorName {
+    max-width: 240px;
   }
 }
