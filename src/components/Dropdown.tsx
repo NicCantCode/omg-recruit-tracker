@@ -55,7 +55,7 @@ export default function Dropdown({ value, options, onChange, disabled = false, a
 
       case "ArrowDown":
         e.preventDefault();
-        setHighlightedIndex((index) => Math.min(index - 1, options.length - 1));
+        setHighlightedIndex((index) => Math.min(index + 1, options.length - 1));
         break;
 
       case "ArrowUp":

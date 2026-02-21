@@ -1,0 +1,66 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px; /* align with your input/dropdown height */
+}
+
+.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.label {
+  font-size: 13px;
+  opacity: 0.9;
+  line-height: 1;
+  user-select: none;
+}
+
+.switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  transition: left 0.12s ease;
+}
+
+.on {
+  background: rgba(100, 108, 255, 0.35);
+  border-color: rgba(100, 108, 255, 0.55);
+}
+
+.on .thumb {
+  left: 23px;
+}
+
+.off {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.switch:focus {
+  outline: 2px solid rgba(100, 108, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.switch:disabled {
+  cursor: not-allowed;
+}
